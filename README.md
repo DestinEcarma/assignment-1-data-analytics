@@ -1,3 +1,3 @@
 # Assignment 1 Data Analytics
 
-Jump to [Assignment 1](src/assignment.ipynb)
+Jump to [Assignment](https://nbviewer.org/github/DestinEcarma/assignment-1-data-analytics/blob/main/src/assignment.ipynb)
