@@ -8,6 +8,8 @@ authors = [
 dependencies = [
     "notebook>=7.3.2",
     "plotly>=5.24.1",
+    "numpy>=2.2.2",
+    "pandas>=2.2.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
