@@ -1,3 +1,3 @@
-# assignment-1-data-analytics
+# Assignment 1 Data Analytics
 
-Describe your project here.
+Jump to [Assignment 1](src/assignment.ipynb)
