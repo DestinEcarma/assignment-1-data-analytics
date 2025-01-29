@@ -3,55 +3,79 @@ import pandas as pd
 
 np.random.seed(69)
 
-NUM_PATIENTS = 100
-SIZE = NUM_PATIENTS * 2
+NUM_PATIENTS = 400
+EVALUATION_INTERVAL = 3  # Per Month
+EVALUATION_DURATION = 4  # Years
+EVALUATION_RANGE = np.arange(0, EVALUATION_DURATION * 12, EVALUATION_INTERVAL)
 
-GENDER = np.random.choice(["M", "F"], size=SIZE)
 
+def simulate_entry() -> pd.DataFrame:
+    gender = np.random.choice(["M", "F"], NUM_PATIENTS)
 
-def baseline() -> [dict]:
-    PAIN_SCORES = np.random.randint(0, 10, size=SIZE)
-    URGENCY_SCORES = np.random.randint(0, 10, size=SIZE)
-    NOCTURNAL_FREQUENCY_SCORES = np.random.randint(0, 21, size=SIZE)
+    pain_scores = np.clip(np.random.normal(5, 3.0, NUM_PATIENTS), 0, 9).astype(
+        int
+    )
 
-    TREATED_INDICES = np.random.permutation(SIZE)[:NUM_PATIENTS]
+    urgency_scores = np.clip(
+        np.random.normal(6, 2.0, NUM_PATIENTS),
+        0,
+        9,
+    ).astype(int)
 
-    return [
+    nocturnal_frequency = np.clip(
+        np.random.normal(3, 1.5, NUM_PATIENTS), 0, 20
+    ).astype(int)
+
+    # 0 means never treated
+    treatment_time = np.random.choice(EVALUATION_RANGE, NUM_PATIENTS)
+
+    return pd.DataFrame(
         {
-            "id": i,
-            "gender": GENDER[i],
-            "group": "treated" if i in TREATED_INDICES else "untreated",
-            "pain": PAIN_SCORES[i],
-            "urgency": URGENCY_SCORES[i],
-            "nocturnal frequency": NOCTURNAL_FREQUENCY_SCORES[i],
+            "id": np.arange(NUM_PATIENTS),
+            "gender": gender,
+            "pain": pain_scores,
+            "urgency": urgency_scores,
+            "nocturnal frequency": nocturnal_frequency,
+            "treatment time": treatment_time,
         }
-        for i in range(SIZE)
-    ]
+    )
 
 
-def at_treatment() -> [dict]:
-    PAIN_SCORES = np.random.randint(0, 10, size=SIZE)
-    URGENCY_SCORES = np.random.randint(0, 10, size=SIZE)
-    NOCTURNAL_FREQUENCY_SCORES = np.random.randint(0, 21, size=SIZE)
+def simulate_evaluations(patients: pd.DataFrame) -> [pd.DataFrame]:
+    treatment = [[] for _ in EVALUATION_RANGE]
 
-    TREATED_INDICES = np.random.permutation(SIZE)[:NUM_PATIENTS]
+    for i in range(NUM_PATIENTS):
+        for t in EVALUATION_RANGE:
+            if t == 0:
+                evaluation = patients.loc[i].copy()
+            else:
+                evaluation = treatment[t // EVALUATION_INTERVAL - 1][i].copy()
 
-    return [
-        {
-            "id": i,
-            "gender": GENDER[i],
-            "group": "treated" if i in TREATED_INDICES else "untreated",
-            "pain": PAIN_SCORES[i],
-            "urgency": URGENCY_SCORES[i],
-            "nocturnal frequency": NOCTURNAL_FREQUENCY_SCORES[i],
-        }
-        for i in range(SIZE)
-    ]
+            if t > evaluation["treatment time"]:
+                evaluation["pain"] = np.clip(
+                    evaluation["pain"] - np.random.normal(0, 1.0), 0, 9
+                ).astype(int)
+
+                evaluation["urgency"] = np.clip(
+                    evaluation["urgency"] - np.random.normal(0, 0.5), 0, 9
+                ).astype(int)
+
+                evaluation["nocturnal frequency"] = np.clip(
+                    evaluation["nocturnal frequency"]
+                    - np.random.normal(0, 0.5),
+                    0,
+                    20,
+                ).astype(int)
+
+            treatment[t // EVALUATION_INTERVAL].append(evaluation)
+
+    return [pd.DataFrame(t) for t in treatment]
 
 
 # Exported data
-patients_baseline = pd.DataFrame(baseline())
+patients_entry = simulate_entry()
 
-patients_at_treatment = pd.DataFrame(at_treatment())
+patients_evaluations = simulate_evaluations(patients_entry)
 
-del pd
+
+del simulate_entry, simulate_evaluations
