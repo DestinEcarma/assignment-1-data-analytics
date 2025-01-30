@@ -118,7 +118,6 @@ jupyterlab-pygments==0.3.0
 jupyterlab-server==2.27.3
     # via jupyterlab
     # via notebook
-kaleido==0.2.1
 markupsafe==3.0.2
     # via jinja2
     # via nbconvert
