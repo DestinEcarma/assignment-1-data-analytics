@@ -26,8 +26,9 @@ def simulate_entry() -> pd.DataFrame:
         np.random.normal(3, 1.5, NUM_PATIENTS), 0, 20
     ).astype(int)
 
-    # 0 means never treated
-    treatment_time = np.random.choice(EVALUATION_RANGE, NUM_PATIENTS)
+    treatment_time = np.random.choice(
+        list(EVALUATION_RANGE) + [None], NUM_PATIENTS
+    )
 
     return pd.DataFrame(
         {
@@ -42,40 +43,78 @@ def simulate_entry() -> pd.DataFrame:
 
 
 def simulate_evaluations(patients: pd.DataFrame) -> [pd.DataFrame]:
-    treatment = [[] for _ in EVALUATION_RANGE]
+    evaluations = []
 
     for i in range(NUM_PATIENTS):
         for t in EVALUATION_RANGE:
             if t == 0:
                 evaluation = patients.loc[i].copy()
             else:
-                evaluation = treatment[t // EVALUATION_INTERVAL - 1][i].copy()
+                evaluation = evaluations[-1].copy()
 
-            if t > evaluation["treatment time"]:
-                evaluation["pain"] = np.clip(
-                    evaluation["pain"] - np.random.normal(0, 1.0), 0, 9
-                ).astype(int)
+            if (
+                evaluation["treatment time"] is not None
+                and t > evaluation["treatment time"]
+            ):
+                pain_std = (-0.25, 1.0)
+                urgency_std = (-0.25, 0.5)
+                nocturnal_std = (-0.25, 0.5)
+            else:
+                pain_std = (0.25, 1.0)
+                urgency_std = (0.25, 0.5)
+                nocturnal_std = (0.25, 0.5)
 
-                evaluation["urgency"] = np.clip(
-                    evaluation["urgency"] - np.random.normal(0, 0.5), 0, 9
-                ).astype(int)
+            evaluation["pain"] = np.clip(
+                evaluation["pain"] + np.random.normal(pain_std[0], pain_std[1]),
+                0,
+                9,
+            ).astype(int)
 
-                evaluation["nocturnal frequency"] = np.clip(
-                    evaluation["nocturnal frequency"]
-                    - np.random.normal(0, 0.5),
-                    0,
-                    20,
-                ).astype(int)
+            evaluation["urgency"] = np.clip(
+                evaluation["urgency"]
+                + np.random.normal(urgency_std[0], urgency_std[1]),
+                0,
+                9,
+            ).astype(int)
 
-            treatment[t // EVALUATION_INTERVAL].append(evaluation)
+            evaluation["nocturnal frequency"] = np.clip(
+                evaluation["nocturnal frequency"]
+                + np.random.normal(nocturnal_std[0], nocturnal_std[1]),
+                0,
+                20,
+            ).astype(int)
 
-    return [pd.DataFrame(t) for t in treatment]
+            evaluation["time"] = t
+            evaluations.append(evaluation)
+
+    return pd.DataFrame(evaluations)
+
+
+def simulate_risk_set(patients_evaluations: pd.DataFrame) -> pd.DataFrame:
+    risk_set = {}
+
+    for t in patients_evaluations["treatment time"].dropna().unique():
+        treated = patients_evaluations[
+            (patients_evaluations["time"] == t)
+            & (patients_evaluations["treatment time"] == t)
+        ]
+
+        untreated = patients_evaluations[
+            (patients_evaluations["time"] == t)
+            & (patients_evaluations["treatment time"] != t)
+        ]
+
+        risk_set[t.astype(int)] = (treated, untreated)
+
+    return pd.DataFrame(risk_set)
 
 
 # Exported data
 patients_entry = simulate_entry()
 
 patients_evaluations = simulate_evaluations(patients_entry)
+
+patients_risk_set = simulate_risk_set(patients_evaluations)
 
 
 del simulate_entry, simulate_evaluations
